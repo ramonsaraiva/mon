@@ -82,7 +82,7 @@ def next_point(points, p1i, p2i):
 		p3 = points[p3i] - p1
 		p3 = p3 - p3.project_over(edge)
 
-		cross = p3.cross(v)
+		cross = v.cross(p3)
 		if cross.dot(edge) > 0:
 			p3i = i
 

@@ -1,85 +1,133 @@
 import sys
-from geo.vec import Vec3
-from algorithm.convexhull.giftwrap import *
 
+from sdl2 import *
 from OpenGL.GLUT import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-spin = 0
+from spec.cam import Cam
+from control import input
+from geo.vec import Vec3
+from algorithm.convexhull.giftwrap import *
 
-#  Initialize material property, light source, lighting model,
-#  and depth buffer.
-def init():
-   glClearColor (1.0, 1.0, 1.0, 0.0)
-   glShadeModel (GL_SMOOTH)
-   glEnable(GL_LIGHTING)
-   glEnable(GL_LIGHT0)
-   glEnable(GL_DEPTH_TEST)
+width = 800
+height = 600
+cam = None
+
+points = []
+polygons = []
+
+def setup_sdl():
+	SDL_Init(SDL_INIT_EVERYTHING)
+	window = SDL_CreateWindow('mon',
+							  SDL_WINDOWPOS_CENTERED,
+							  SDL_WINDOWPOS_CENTERED,
+							  width, height, SDL_WINDOW_SHOWN)
+	surface = SDL_GetWindowSurface(window)
+	return window
+
+def setup_gl():
+	glClearColor(0.27451, 0.50, 0.70, 0);
+	glClearDepth(1.0)
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_COLOR_MATERIAL);
+
+	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glViewport(0, 0, width, height);
+
+	light_position = [1.0, 1.0, 1.0, 0.0];
+	light_specular = [1.0, 1.0, 1.0,1.0];
+	light_diffuse = [1.0, 1.0, 1.0,1.0];
+	ambient_light = [0.5, 0.5, 0.5, 1.0];
+
+	glShadeModel(GL_SMOOTH);
+
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambient_light);
+
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	gluPerspective(60.0, width / height, 1.0, 1024.0);
+
+def render():
+	glClearDepth(1.0)
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	cam.compute_lookat()
+
+	glPushMatrix()
+	glColor3f(0.5, 0.5, 0.5)
+
+	glBegin(GL_TRIANGLES)
+	for poly in polygons:
+		v1 = poly[1] - poly[0]
+		v2 = poly[2] - poly[0]
+		normal = v2.cross(v1)
+		normal.normalize()
+
+		glNormal3f(normal.x, normal.y, normal.z)
+
+		for p in poly:
+			glVertex3f(p.x, p.y, p.z)
+	glEnd()
+	glPopMatrix()
+
+"""
+	max = 10
+	for i in xrange(-max, max):
+		for j in xrange(-max, max):
+			for k in xrange(-max, max):
+				glPushMatrix()
+				glTranslatef(i, j, k)
+				glutSolidCube(0.2)
+				glPopMatrix()
+"""
 
 
-#  Here is where the light position is reset after the modeling
-#  transformation (glRotated) is called.  This places the
-#  light at a new position in world coordinates.  The cube
-#  represents the position of the light.
-def display():
-   position =  [0.0, 0.0, 1.5, 1.0]
+if __name__ == '__main__':
+	window = setup_sdl()
+	glutInit()
+	setup_gl()
 
-   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-   glPushMatrix ()
-   gluLookAt (0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-   glPushMatrix()
-   glColor3f(0, 0, 0)
-   glBegin(GL_TRIANGLES)
-   points = []
-   polygons = []
-   points.append(Vec3(0.500000, -0.500000, -0.500000))
-   points.append(Vec3(0.500000, -0.500000, 0.500000))
-   points.append(Vec3(-0.500000, -0.500000, 0.500000))
-   points.append(Vec3(-0.500000, -0.500000, -0.500000))
-   points.append(Vec3(0.500000, 0.500000, -0.499999))
-   points.append(Vec3(0.499999, 0.500000, 0.500000))
-   points.append(Vec3(-0.500000, 0.500000, 0.500000))
-   points.append(Vec3(-0.500000, 0.500000, -0.500000))
+	cam = Cam(90, 800, 600, 1000.0)
 
-   polygons = giftwrap(points)
-   for poly in polygons:
-      for p in poly:
-         print(p.x, p.y, p.z)
-         glNormal3f(p.x, p.y, p.z)
-         glVertex3f(p.x, p.y, p.z)
-   glEnd()
-   glPopMatrix()
+	# cube points
+	points.append(Vec3(0.500000, -0.500000, -0.500000))
+	points.append(Vec3(0.500000, -0.500000, 0.500000))
+	points.append(Vec3(-0.500000, -0.500000, 0.500000))
+	points.append(Vec3(-0.500000, -0.500000, -0.500000))
+	points.append(Vec3(0.500000, 0.500000, -0.499999))
+	points.append(Vec3(0.499999, 0.500000, 0.500000))
+	points.append(Vec3(-0.500000, 0.500000, 0.500000))
+	points.append(Vec3(-0.500000, 0.500000, -0.500000))
+
+	polygons = giftwrap(points)
+
+	while True:
+		input.check()
+		cam.refresh()
+		render()
+		SDL_GL_SwapWindow(window)
+
+	SDL_DestroyWindow(window)
+	SDL_Quit()
+
+"""
    glFlush ()
-
-def reshape (w, h):
-   glViewport (0, 0, w, h)
-   glMatrixMode (GL_PROJECTION)
-   glLoadIdentity()
-   gluPerspective(40.0, w/h, 1.0, 20.0)
-   glMatrixMode(GL_MODELVIEW)
-   glLoadIdentity()
-
-def mouse(button, state, x, y):
-   global spin
-   if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-       spin = (spin + 30) % 360
-       glutPostRedisplay()
-
-def keyboard(key, x, y):
-   if key == chr(27):
-       sys.exit(0)
-   if key == chr(32):
-       glutPostRedisplay()
-
-glutInit(sys.argv)
-glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
-glutInitWindowSize (500, 500);
-glutInitWindowPosition(100, 100)
-glutCreateWindow("movelight")
-init()
-glutDisplayFunc(display)
-glutReshapeFunc(reshape)
-glutMouseFunc(mouse)
-glutKeyboardFunc(keyboard)
-glutMainLoop()
+"""

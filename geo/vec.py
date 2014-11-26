@@ -1,14 +1,14 @@
 from math import sqrt
 
 class Vec3:
-	_x = 0.0
-	_y = 0.0
-	_z = 0.0
-
 	def __init__(self, x, y, z):
-		self._x = x;
-		self._y = y;
-		self._z = z;
+		self._x = x
+		self._y = y
+		self._z = z
+
+	@classmethod
+	def zero(cls):
+		return cls(0, 0, 0)
 
 	@property
 	def x(self):
@@ -35,21 +35,21 @@ class Vec3:
 		self._z = val
 
 	def __add__(self, other):
-		x = self._x + other.x;
-		y = self._y + other.y;
-		z = self._z + other.z;
+		x = self._x + other.x
+		y = self._y + other.y
+		z = self._z + other.z
 		return Vec3(x, y, z)
 
 	def __sub__(self, other):
-		x = self._x - other.x;
-		y = self._y - other.y;
-		z = self._z - other.z;
+		x = self._x - other.x
+		y = self._y - other.y
+		z = self._z - other.z
 		return Vec3(x, y, z)
 
 	def __mul__(self, other):
-		x = self._x * other.x;
-		y = self._y * other.y;
-		z = self._z * other.z;
+		x = self._x * other.x
+		y = self._y * other.y
+		z = self._z * other.z
 		return Vec3(x, y, z)
 
 	def __eq__(self, other):
@@ -70,9 +70,9 @@ class Vec3:
 		if length == 0: return
 
 		length = sqrt(length)
-		self._x = self._x / length;
-		self._y = self._y / length;
-		self._z = self._z / length;
+		self._x = self._x / length
+		self._y = self._y / length
+		self._z = self._z / length
 
 	def cross(self, v):
 		return Vec3(self._y * v.z - self._z * v.y,
