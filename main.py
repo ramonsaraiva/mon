@@ -89,9 +89,7 @@ def render():
 	glEnd()
 	glPopMatrix()
 	"""
-	glPushMatrix()
 	cube.render()
-	glPopMatrix()
 
 
 if __name__ == '__main__':
@@ -111,7 +109,7 @@ if __name__ == '__main__':
 	points.append(Vec3(-0.500000, 0.500000, 0.500000))
 	points.append(Vec3(-0.500000, 0.500000, -0.500000))
 
-	cube = ObjVBO('resources/cube/cube.obj')
+	cube = ObjVBO('primitives/cube/cube.obj')
 
 	polygons = giftwrap(points)
 

@@ -47,17 +47,17 @@ class Material(object):
 			glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
 		else:
 			glBindTexture(GL_TEXTURE_2D, 0)
-			glColor(*mtl['Kd'])
+			#glColor(mtl['Kd'])
 
 class Obj:
 	"""Geometric info for a 3-D model as represented in an OBJ file.
 	Base class uses fixed function."""
-	swapyz = True
+	swapyz = False
 	reorder_materials = True  # Allow optimization by reordering materials
 	reorder_polygons = True  # Allow optimization by reordering materials
 	treat_polygon = False  # Set to False to treat triangles and quads specially
-	use_list = True  # Use a display list
-	use_ctypes = True
+	use_list = False  # Use a display list
+	use_ctypes = False
 	generate_on_init = False  # Generate display list when loaded from OBJ
 	generate_on_load = True  # Generate display list when loaded from pickle file
 
