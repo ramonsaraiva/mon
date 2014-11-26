@@ -3,3 +3,4 @@
 *.pyc
 resources
 primitives
+*.vim
