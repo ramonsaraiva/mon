@@ -1,5 +1,4 @@
-import sys
-
+import sys 
 from sdl2 import *
 from OpenGL.GLUT import *
 from OpenGL.GL import *
@@ -8,6 +7,7 @@ from OpenGL.GLU import *
 from spec.cam import Cam
 from control import input
 from geo.vec import Vec3
+from model.object import ObjVBO
 from algorithm.convexhull.giftwrap import *
 
 width = 800
@@ -16,6 +16,7 @@ cam = None
 
 points = []
 polygons = []
+cube = None
 
 def setup_sdl():
 	SDL_Init(SDL_INIT_EVERYTHING)
@@ -70,7 +71,7 @@ def render():
 	glLoadIdentity();
 
 	cam.compute_lookat()
-
+	"""
 	glPushMatrix()
 	glColor3f(0.5, 0.5, 0.5)
 
@@ -87,17 +88,10 @@ def render():
 			glVertex3f(p.x, p.y, p.z)
 	glEnd()
 	glPopMatrix()
-
-"""
-	max = 10
-	for i in xrange(-max, max):
-		for j in xrange(-max, max):
-			for k in xrange(-max, max):
-				glPushMatrix()
-				glTranslatef(i, j, k)
-				glutSolidCube(0.2)
-				glPopMatrix()
-"""
+	"""
+	glPushMatrix()
+	cube.render()
+	glPopMatrix()
 
 
 if __name__ == '__main__':
@@ -117,6 +111,8 @@ if __name__ == '__main__':
 	points.append(Vec3(-0.500000, 0.500000, 0.500000))
 	points.append(Vec3(-0.500000, 0.500000, -0.500000))
 
+	cube = ObjVBO('resources/cube/cube.obj')
+
 	polygons = giftwrap(points)
 
 	while True:
@@ -127,7 +123,3 @@ if __name__ == '__main__':
 
 	SDL_DestroyWindow(window)
 	SDL_Quit()
-
-"""
-   glFlush ()
-"""
