@@ -1,21 +1,24 @@
 import sys 
+
 from sdl2 import *
 from OpenGL.GLUT import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+from geo.vec import Vec3
 from spec.cam import Cam
 from control import input
-from geo.vec import Vec3
-from model.object import OBJ_vbo
+
+from scene.scene import Scene
+
 from algorithm.convexhull.giftwrap import *
 
 width = 800
 height = 600
 cam = None
 
-buildings = []
 bsize = 2
+scene = None
 
 def setup_sdl():
 	SDL_Init(SDL_INIT_EVERYTHING)
@@ -70,14 +73,7 @@ def render():
 	glLoadIdentity()
 
 	cam.compute_lookat()
-
-	for i in xrange(-bsize, bsize):
-		for j in xrange(-bsize, bsize):
-			for k in xrange(-bsize, bsize):
-				glPushMatrix()
-				glTranslatef(i*10, j, k*10)
-				buildings[i*j+k].render()
-				glPopMatrix()
+	scene.render()
 
 
 if __name__ == '__main__':
@@ -90,11 +86,16 @@ if __name__ == '__main__':
 	cam._position.z = -40
 	cam.compute_eye()
 
+	scene = Scene()
+
 	for i in xrange(-bsize, bsize):
 		for j in xrange(-bsize, bsize):
 			for k in xrange(-bsize, bsize):
-
-				buildings.append(OBJ_vbo('resources/b3x1x5.obj'))
+				entity = scene.add_entity()
+				entity.load_model('resources/b3x1x5.obj')
+				entity._translate.x = i*10
+				entity._translate.y = j
+				entity._translate.z = k*10
 
 	while True:
 		input.check()
