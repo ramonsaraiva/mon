@@ -1,14 +1,21 @@
 import os.path
 
+import pygame, ctypes
 from OpenGL.GL import *
 from OpenGL.arrays import vbo
-
-from sdl2 import SDL_Surface
-from sdl2.ext import load_image, get_image_formats
-
 from numpy import array
 
-class Material(object):
+# Convert a list to a ctype string for pickling
+def toctype(val, btype = ctypes.c_float):
+    a = (btype * len(val))(*val)
+    return ctypes.string_at(a, ctypes.sizeof(a))
+
+# Convert an unpickled string to a ctype array
+def fromctype(s, btype = ctypes.c_float):
+    return (btype * (len(s) // ctypes.sizeof(btype))).from_buffer_copy(s)
+
+# TODO: cache textures between files
+class MTL(object):
 	"""Material info for a 3-D model as represented in an MTL file"""
 	def __init__(self, filename):
 		"""Read data from the file"""
@@ -24,10 +31,9 @@ class Material(object):
 				raise ValueError, "mtl file doesn't start with newmtl stmt"
 			elif values[0] == 'map_Kd':
 				mtl[values[0]] = values[1]
-				surf = load_image(os.path.join(os.path.dirname(filename), mtl['map_Kd']))
-				mtl["image"] = surf
-				mtl["ix"] = surf.w
-				mtl["iy"] = surf.h
+				surf = pygame.image.load(os.path.join(os.path.dirname(filename), mtl['map_Kd']))
+				mtl["image"] = pygame.image.tostring(surf, 'RGBA', 1)
+				mtl["ix"], mtl["iy"] = surf.get_rect().size
 			else:
 				mtl[values[0]] = map(float, values[1:])
 
@@ -39,7 +45,7 @@ class Material(object):
 			glBindTexture(GL_TEXTURE_2D, texid)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, mtl["ix"], mtl["iy"], 0, GL_RGB, GL_UNSIGNED_BYTE, mtl["image"]._pxbuf)
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mtl["ix"], mtl["iy"], 0, GL_RGBA, GL_UNSIGNED_BYTE, mtl["image"])
 
 	def bind(self, material):
 		mtl = self.contents[material]
@@ -47,17 +53,18 @@ class Material(object):
 			glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
 		else:
 			glBindTexture(GL_TEXTURE_2D, 0)
-			#glColor(mtl['Kd'])
+			glColor(*mtl['Kd'])
 
-class Obj:
+
+class OBJ(object):
 	"""Geometric info for a 3-D model as represented in an OBJ file.
 	Base class uses fixed function."""
 	swapyz = False
 	reorder_materials = True  # Allow optimization by reordering materials
 	reorder_polygons = True  # Allow optimization by reordering materials
 	treat_polygon = False  # Set to False to treat triangles and quads specially
-	use_list = False  # Use a display list
-	use_ctypes = False
+	use_list = True  # Use a display list
+	use_ctypes = True
 	generate_on_init = False  # Generate display list when loaded from OBJ
 	generate_on_load = True  # Generate display list when loaded from pickle file
 
@@ -123,7 +130,7 @@ class Obj:
 				else:
 					material = values[1]
 			elif values[0] == 'mtllib':
-				self.mtl = Material(os.path.join(os.path.dirname(filename), values[1]))  # TODO: multiple files?
+				self.mtl = MTL(os.path.join(os.path.dirname(filename), values[1]))  # TODO: multiple files?
 			elif values[0] == 'p':
 				raise NotImplementedError
 			elif values[0] == 'l':
@@ -207,12 +214,64 @@ class Obj:
 		if self.generated and self.use_list and glDeleteLists:
 			glDeleteLists(self.gl_list,1)
 
-class ObjVBO(Obj):
+class OBJ_array(OBJ):
+	"""3-D model using vertex arrays"""
+	
+	def process(self):
+		"""Build index list for vertex arrays"""
+		self.indices = []
+		self.ivertices = []
+		self.inormals = []
+		self.itexcoords = []
+		imap = {}
+		for material, tfaces in self.mfaces:
+			mindices = []
+			for (nvs, dotex, donorm), (vs, vns, vts) in tfaces:
+				inds = []
+				for v, vn, vt in zip(vs, vns, vts):
+					ivertex = tuple(self.vertices[v-1])
+					inorm = tuple(self.normals[vn-1]) if vn else (0.,0.,0.)
+					itcoord = tuple(self.texcoords[vt-1]) if vt else (0.,0.)
+					key = ivertex, inorm, itcoord
+					if key not in imap:
+						imap[key] = len(imap)
+						self.ivertices.extend(ivertex)
+						self.inormals.extend(inorm)
+						self.itexcoords.extend(itcoord)
+					inds.append(imap[key])
+				mindices.append((nvs, dotex, donorm, inds))
+			self.indices.append((material, mindices))
+		if self.use_ctypes:
+			self.ivertices = toctype(self.ivertices)
+			self.inormals = toctype(self.inormals)
+			self.itexcoords = toctype(self.itexcoords)
+		del self.vertices, self.normals, self.texcoords
+
+	def basic_render(self):
+		glVertexPointer(3, GL_FLOAT, 0, self.ivertices)
+		glNormalPointer(GL_FLOAT, 0, self.inormals)
+		glTexCoordPointer(2, GL_FLOAT, 0, self.itexcoords)
+
+		glEnableClientState(GL_VERTEX_ARRAY)
+		texon, normon = None, None
+		for material, mindices in self.indices:
+			self.mtl.bind(material)
+			for nvs, dotex, donorm, ilist in mindices:
+				if donorm != normon:
+					normon = donorm
+					(glEnableClientState if donorm else glDisableClientState)(GL_NORMAL_ARRAY)
+				if dotex != texon:
+					texon = dotex
+					(glEnableClientState if dotex else glDisableClientState)(GL_TEXTURE_COORD_ARRAY)
+				shape = [GL_TRIANGLES, GL_QUADS, GL_POLYGON][nvs-3]
+				glDrawElements(shape, len(ilist), GL_UNSIGNED_INT, ilist)
+
+class OBJ_vbo(OBJ):
 	"""3-D model using vertex buffer objects"""
 
 	def __init__(self, filename):
 		self.vbo_v = None
-		Obj.__init__(self, filename)
+		OBJ.__init__(self, filename)
 
 	def process(self):
 		"""Build index list for VBOs"""
@@ -268,4 +327,5 @@ class ObjVBO(Obj):
 			self.vbo_v.delete()
 			self.vbo_n.delete()
 			self.vbo_t.delete()
-		Obj.__del__(self)
+		OBJ.__del__(self)
+
