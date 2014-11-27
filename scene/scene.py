@@ -1,6 +1,6 @@
-from entity import Entity
+from .entity import Entity
 
-class Scene:
+class Scene(object):
 	def __init__(self):
 		self._entities = []
 

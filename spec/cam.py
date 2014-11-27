@@ -6,7 +6,7 @@ from OpenGL.GLU import *
 from geo.vec import Vec3
 from control import input
 
-class Cam:
+class Cam(object):
 	def __init__(self, angle, width, height, depth):
 		self._position = Vec3.zero()
 		self._direction = Vec3.zero()

@@ -5,56 +5,14 @@ from OpenGL.GL import *
 from OpenGL.arrays import vbo
 from numpy import array
 
-# Convert a list to a ctype string for pickling
+from .material import MTL
+
 def toctype(val, btype = ctypes.c_float):
     a = (btype * len(val))(*val)
     return ctypes.string_at(a, ctypes.sizeof(a))
 
-# Convert an unpickled string to a ctype array
 def fromctype(s, btype = ctypes.c_float):
     return (btype * (len(s) // ctypes.sizeof(btype))).from_buffer_copy(s)
-
-# TODO: cache textures between files
-class MTL(object):
-	"""Material info for a 3-D model as represented in an MTL file"""
-	def __init__(self, filename):
-		"""Read data from the file"""
-		self.contents = {}
-		mtl = None
-		for line in open(filename, "r"):
-			if line.startswith('#'): continue
-			values = line.split()
-			if not values: continue
-			if values[0] == 'newmtl':
-				mtl = self.contents[values[1]] = {}
-			elif mtl is None:
-				raise ValueError, "mtl file doesn't start with newmtl stmt"
-			elif values[0] == 'map_Kd':
-				mtl[values[0]] = values[1]
-				surf = pygame.image.load(os.path.join(os.path.dirname(filename), mtl['map_Kd']))
-				mtl["image"] = pygame.image.tostring(surf, 'RGBA', 1)
-				mtl["ix"], mtl["iy"] = surf.get_rect().size
-			else:
-				mtl[values[0]] = map(float, values[1:])
-
-	def generate(self):
-		"""Generate the textures necessary for any materials"""
-		for mtl in self.contents.values():
-			if "map_Kd" not in mtl: continue
-			texid = mtl['texture_Kd'] = glGenTextures(1)
-			glBindTexture(GL_TEXTURE_2D, texid)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mtl["ix"], mtl["iy"], 0, GL_RGBA, GL_UNSIGNED_BYTE, mtl["image"])
-
-	def bind(self, material):
-		mtl = self.contents[material]
-		if 'texture_Kd' in mtl:
-			glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
-		else:
-			glBindTexture(GL_TEXTURE_2D, 0)
-			glColor(*mtl['Kd'])
-
 
 class OBJ(object):
 	"""Geometric info for a 3-D model as represented in an OBJ file.
@@ -328,4 +286,3 @@ class OBJ_vbo(OBJ):
 			self.vbo_n.delete()
 			self.vbo_t.delete()
 		OBJ.__del__(self)
-

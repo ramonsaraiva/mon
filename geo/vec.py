@@ -1,6 +1,6 @@
 from math import sqrt
 
-class Vec3:
+class Vec3(object):
 	def __init__(self, x, y, z):
 		self._x = x
 		self._y = y

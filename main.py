@@ -1,4 +1,5 @@
 import sys 
+import random
 
 from sdl2 import *
 from OpenGL.GLUT import *
@@ -13,8 +14,8 @@ from scene.scene import Scene
 
 from algorithm.convexhull.giftwrap import *
 
-width = 800
-height = 600
+width = 1600
+height = 900
 cam = None
 
 bsize = 2
@@ -30,7 +31,7 @@ def setup_sdl():
 	return window
 
 def setup_gl():
-	glClearColor(0.27451, 0.50, 0.70, 0)
+	glClearColor(0, 0, 0, 0)
 	glClearDepth(1.0)
 
 	glEnable(GL_DEPTH_TEST)
@@ -81,21 +82,43 @@ if __name__ == '__main__':
 	glutInit()
 	setup_gl()
 
-	cam = Cam(90, 800, 600, 1000.0)
-	cam._position.y = 30
-	cam._position.z = -40
+	cam = Cam(90, width, height, 1000.0)
+	cam._position.y = 25
+	cam._position.z = -80
 	cam.compute_eye()
 
 	scene = Scene()
 
+	"""
 	for i in xrange(-bsize, bsize):
 		for j in xrange(-bsize, bsize):
 			for k in xrange(-bsize, bsize):
 				entity = scene.add_entity()
 				entity.load_model('resources/b3x1x5.obj')
-				entity._translate.x = i*10
-				entity._translate.y = j
-				entity._translate.z = k*10
+				entity.translate = [i*10, j, k*10]
+				e2 = scene.add_entity()
+				e2.load_model('resources/b2.obj')
+				e2.translate = [i*10, j, k*10]
+	"""
+
+	floor_size = 20
+	for i in xrange(-floor_size, floor_size):
+		for j in xrange(-floor_size, floor_size):
+			entity = scene.add_entity()
+			entity.load_model('resources/street.obj')
+			entity.translate = [i*20, 0, j*20]
+
+
+	for i in range(1200):
+		positions = [random.uniform(-200, 200) for p in range(3)]
+		positions[1] = 0
+		rotate = random.uniform(0, 360)
+		scale = random.uniform(1, 2)
+		entity = scene.add_entity()
+		entity.load_model('resources/building.obj')
+		entity.translate = positions
+		entity.rotate.y = rotate
+		entity.scale.y = scale
 
 	while True:
 		input.check()
